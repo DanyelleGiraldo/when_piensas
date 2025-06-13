@@ -35,6 +35,16 @@ async def webhook(request: Request):
     with index_lock:
         check_and_reset_timeout()
         
+        if current_index >= len(nombres):
+            reset_index()
+            return {
+                "type": "conversation_initiation_client_data",
+                "dynamic_variables": {
+                    "person_name": "no hay mas clientes"
+                },
+                "status": "success"
+            }
+        
         nombre = nombres[current_index]
         current_index += 1
         
@@ -53,6 +63,7 @@ async def webhook(request: Request):
         check_and_reset_timeout()
         
         if current_index >= len(numeros):
+            reset_index()
             return {
                 "phone_number": "no hay mas clientes"
             }
