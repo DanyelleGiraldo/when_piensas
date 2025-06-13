@@ -8,6 +8,7 @@ app = FastAPI()
 # Leer archivo Excel
 df = pd.read_excel("agenciasdeviajebarranquilla.xlsx")
 nombres: List[str] = df["Nombre"].dropna().tolist()
+numeros: List[str] = df["Número de teléfono móvil"].dropna().tolist()
 
 # Control de índice
 index_lock = threading.Lock()
@@ -30,6 +31,20 @@ async def webhook(request: Request):
                 "person_name": nombre
             },
             "status": "success"
+        }
+    
+@app.get("/numero")
+async def webhook(request: Request):
+    global current_index
+    with index_lock:
+        if current_index >= len(numeros):
+            raise HTTPException(status_code=404, detail="No hay más numeros disponibles.")
+        
+        numero = numeros[current_index]
+        current_index += 1
+        
+        return {
+            "phone_number":numero
         }
 
 @app.get("/")
