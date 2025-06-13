@@ -24,7 +24,13 @@ async def webhook(request: Request):
         nombre = nombres[current_index]
         current_index += 1
         
-        return {"person_name": nombre}
+        return {
+            "type": "conversation_initiation_client_data",
+            "dynamic_variables": {
+                "person_name": "{{ $json.person_name }}"
+            },
+            "status": "success"
+        }
 
 @app.get("/")
 async def health_check():
