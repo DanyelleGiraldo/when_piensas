@@ -14,6 +14,7 @@ index_lock = threading.Lock()
 current_index = 0
 
 @app.post("/webhook")
+@app.post("/get")
 async def webhook(request: Request):
     global current_index
     with index_lock:
