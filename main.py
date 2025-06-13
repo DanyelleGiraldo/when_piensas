@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 import pandas as pd
 from typing import List
 import threading
+import time
 
 app = FastAPI()
 
@@ -13,14 +14,26 @@ numeros: List[str] = df["Número de teléfono móvil"].dropna().tolist()
 # Control de índice
 index_lock = threading.Lock()
 current_index = 0
+last_request_time = time.time()
+
+def reset_index():
+    global current_index, last_request_time
+    current_index = 0
+    last_request_time = time.time()
+
+def check_and_reset_timeout():
+    global last_request_time
+    current_time = time.time()
+    if current_time - last_request_time > 300:  # 300 segundos = 5 minutos
+        reset_index()
+    last_request_time = current_time
 
 @app.post("/webhook")
 @app.post("/get")
 async def webhook(request: Request):
     global current_index
     with index_lock:
-        if current_index >= len(nombres):
-            raise HTTPException(status_code=404, detail="No hay más nombres disponibles.")
+        check_and_reset_timeout()
         
         nombre = nombres[current_index]
         current_index += 1
@@ -37,14 +50,18 @@ async def webhook(request: Request):
 async def webhook(request: Request):
     global current_index
     with index_lock:
+        check_and_reset_timeout()
+        
         if current_index >= len(numeros):
-            raise HTTPException(status_code=404, detail="No hay más numeros disponibles.")
+            return {
+                "phone_number": "no hay mas clientes"
+            }
         
         numero = numeros[current_index]
         current_index += 1
         
         return {
-            "phone_number":numero
+            "phone_number": numero
         }
 
 @app.get("/")
