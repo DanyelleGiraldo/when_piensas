@@ -24,3 +24,7 @@ async def webhook(request: Request):
         current_index += 1
         
         return {"person_name": nombre}
+
+@app.get("/")
+async def health_check():
+    return {"status": "healthy", "total_names": len(nombres)}
