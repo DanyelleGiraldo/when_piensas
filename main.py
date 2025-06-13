@@ -27,7 +27,7 @@ async def webhook(request: Request):
         return {
             "type": "conversation_initiation_client_data",
             "dynamic_variables": {
-                "person_name": "{{ $json.person_name }}"
+                "person_name": nombre
             },
             "status": "success"
         }
