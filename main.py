@@ -72,7 +72,7 @@ async def webhook(request: Request):
         current_index += 1
         
         return {
-            "phone_number": numero
+            "phone_number": f"{numero}"
         }
 
 @app.get("/")
