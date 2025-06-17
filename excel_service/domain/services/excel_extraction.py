@@ -42,7 +42,7 @@ def process_excel(file: UploadFile, col_name, col_number, col_review, col_catego
 
 async def save_clients(client_list: list[dict]):
     try:
-        clients_collection = get_clients("clients")
+        clients_collection = get_clients()
         if client_list:
             result = clients_collection.insert_many(client_list)
             logger.info(f"{len(result.inserted_ids)} clientes insertados correctamente.")
