@@ -30,7 +30,7 @@ def check_and_reset_timeout():
         reset_index()
     last_request_time = current_time
 
-@app.get("/nombre")
+@app.post("/webhook")
 async def get_nombre():
     global current_index, estado_peticion
     with index_lock:
