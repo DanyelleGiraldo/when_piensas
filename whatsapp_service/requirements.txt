@@ -4,3 +4,4 @@ rq
 httpx
 uvicorn
 python-dotenv
+celery

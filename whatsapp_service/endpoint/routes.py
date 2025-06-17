@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 from service.whatsapp_service import send_message_n8n
 import os
+from service.task import send_message_task
 from dotenv import load_dotenv
 import json
 
@@ -37,7 +38,7 @@ async def recive_whatsapp_message(request: Request):
                     print(f"MENSAJE VÁLIDO ENCONTRADO. Enviando a n8n...")
                     print(f"  -> Teléfono: {phone}")
                     print(f"  -> Mensaje: {message}")
-                    await send_message_n8n(phone, message)
+                    send_message_task.delay(phone, message)
             else:
                 print(f"Mensaje recibido no es de texto (tipo: {msg.get('type')}). Ignorando.")
 
