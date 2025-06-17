@@ -1,74 +1,41 @@
 import os
-import psycopg2
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
-from dotenv import load_dotenv
 import logging
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
-
+# Cargar las variables de entorno
 load_dotenv()
 
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT= os.getenv("DB_PORT")
-DB_NAME= os.getenv("DB_NAME")
-DB_USER= os.getenv("DB_USER")
-DB_PASSWORD= os.getenv("DB_PASSWORD")
+# Configurar logger
+logger = logging.getLogger(__name__)
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Variables de entorno
+DB_CLUSTER = os.getenv("DB_CLUSTER")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
 
-engine = create_engine(DATABASE_URL)
+MONGO_URI = f"mongodb+srv://{DB_USER}:{DB_PASSWORD}@{DB_CLUSTER}/{DB_NAME}?retryWrites=true&w=majority"
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base= declarative_base()
-
-async def get_connection():
+def get_clients():
     try:
-        conn = psycopg2.connect(
-            host= DB_HOST,
-            port= DB_PORT,
-            dbname= DB_NAME,
-            user= DB_USER,
-            password= DB_PASSWORD
-        )
-        return conn
-    except Exception as e: 
+        mongo_client = MongoClient(MONGO_URI)
+        db = mongo_client[DB_NAME]
+        clients_collection = db["clients"]
+        logger.info("Conectado exitosamente a MongoDB.")
+        return clients_collection
+    except Exception as e:
         logger.error(f"Error al conectar a la base de datos: {e}")
         return None
 
-async def get_db():
-    db= SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def init_database():
+    collection = get_clients()
+    if collection is None:
+        logger.error("No se pudo inicializar la base de datos porque la colección es None.")
+        return
 
-
-async def init_database():
-    Base.metadata.create_all(bind=engine)
-    
-    conn= get_connection()
-    
     try:
-        await conn.execute('''              
-            CREATE TABLE IF NOT EXISTS clients (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                phone VARCHAR(20) NOT NULL UNIQUE,
-                review TEXT,
-                category VARCHAR(100),
-                adress TEXT,
-                web TEXT,
-                mail VARCHAR(100),
-                latitude VARCHAR(100),
-                length VARCHAR(100),
-                ubication TEXT,
-                state VARCHAR(20) DEFAULT 'pending'
-            )
-        ''')
+        collection.create_index("phone", unique=True)
+        logger.info("Índices de MongoDB creados correctamente.")
     except Exception as e:
-        print(f'Error al inicializar la base de datos: {e}')
-        raise
-    finally:
-        await conn.close()
+        logger.error(f"Error al crear índices en MongoDB: {e}")

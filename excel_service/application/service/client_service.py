@@ -1,5 +1,6 @@
 # services/client_service.py
-from sqlalchemy.orm import Session
+from bson import ObjectId
+
 from infrastructure.database.client_repository import ClientRepository
 from infrastructure.database.client_schema import ClientCreate, ClientUpdate, ClientSearch
 from domain.models.clients import Client

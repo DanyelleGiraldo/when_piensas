@@ -1,42 +1,38 @@
-from sqlalchemy.orm import Session
-from domain.models.clients import Client
+from bson import ObjectId
 from client_schema import ClientCreate, ClientUpdate
+from pymongo.collection import Collection
 
 
 class ClientRepository:
 
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(self, collection: Collection):
+        self.collection = collection
 
-    def get_by_id(self, client_id: int):
-        return self.db.query(Client).filter(Client.id == client_id).first()
+    def get_by_id(self, client_id: str):
+        return self.collection.find_one({"_id": ObjectId(client_id)})
 
     def get_all(self, skip: int = 0, limit: int = 10):
-        return self.db.query(Client).offset(skip).limit(limit).all()
+        return list(self.collection.find().skip(skip).limit(limit))
 
     def create(self, client_data: ClientCreate):
-        new_client = Client(**client_data.dict())
-        self.db.add(new_client)
-        self.db.commit()
-        self.db.refresh(new_client)
-        return new_client
+        data = client_data.dict()
+        result = self.collection.insert_one(data)
+        data["_id"] = result.inserted_id
+        return data
 
-    def update(self, client_id: int, client_data: ClientUpdate):
+    def update(self, client_id: str, client_data: ClientUpdate):
+        update_data = {"$set": client_data.dict(exclude_unset=True)}
+        result = self.collection.update_one(
+            {"_id": ObjectId(client_id)},
+            update_data
+        )
+        if result.matched_count == 0:
+            return None
+        return self.get_by_id(client_id)
+
+    def delete(self, client_id: str):
         client = self.get_by_id(client_id)
         if not client:
             return None
-
-        for field, value in client_data.dict(exclude_unset=True).items():
-            setattr(client, field, value)
-
-        self.db.commit()
-        self.db.refresh(client)
-        return client
-
-    def delete(self, client_id: int):
-        client = self.get_by_id(client_id)
-        if not client:
-            return None
-        self.db.delete(client)
-        self.db.commit()
+        self.collection.delete_one({"_id": ObjectId(client_id)})
         return client

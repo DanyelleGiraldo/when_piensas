@@ -1,6 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Query
-from sqlalchemy.orm import Session
-from typing import List, Optional
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from typing import List
 from infrastructure.database.client_schema import (
     ClientCreate, 
     ClientUpdate, 
@@ -8,14 +7,13 @@ from infrastructure.database.client_schema import (
     ClientSearch,
     ClientList
 )
-from infrastructure.database.client_repository import ClientRepository
-from config.db import get_db, init_database
+from config.db import get_clients, init_database
 from domain.services.excel_extraction import process_excel, save_clients
 from fastapi.middleware.cors import CORSMiddleware
+from bson import ObjectId
 
 app = FastAPI(title="API de Clientes")
 
-# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,47 +23,50 @@ app.add_middleware(
 )
 
 @app.on_event("startup")
-async def startup_event():
-    await init_database()
+def startup_event():
+    init_database()
 
 @app.post("/clients/", response_model=ClientResponse)
-async def create_client(client: ClientCreate, db: Session = Depends(get_db)):
-    repo = ClientRepository(db)
-    return repo.create(client)
+def create_client(client: ClientCreate):
+    collection = get_clients()
+    result = collection.insert_one(client.dict())
+    client_data = collection.find_one({"_id": result.inserted_id})
+    return ClientResponse(**client_data, id=str(client_data["_id"]))
 
 @app.get("/clients/{client_id}", response_model=ClientResponse)
-async def get_client(client_id: int, db: Session = Depends(get_db)):
-    repo = ClientRepository(db)
-    client = repo.get_by_id(client_id)
+def get_client(client_id: str):
+    collection = get_clients()
+    client = collection.find_one({"_id": ObjectId(client_id)})
     if not client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    return client
+    return ClientResponse(**client, id=str(client["_id"]))
 
 @app.put("/clients/{client_id}", response_model=ClientResponse)
-async def update_client(client_id: int, client: ClientUpdate, db: Session = Depends(get_db)):
-    repo = ClientRepository(db)
-    updated_client = repo.update(client_id, client)
-    if not updated_client:
+def update_client(client_id: str, client: ClientUpdate):
+    collection = get_clients()
+    result = collection.update_one(
+        {"_id": ObjectId(client_id)},
+        {"$set": client.dict(exclude_unset=True)}
+    )
+    if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    return updated_client
+    updated_client = collection.find_one({"_id": ObjectId(client_id)})
+    return ClientResponse(**updated_client, id=str(updated_client["_id"]))
 
 @app.delete("/clients/{client_id}")
-async def delete_client(client_id: int, db: Session = Depends(get_db)):
-    repo = ClientRepository(db)
-    deleted_client = repo.delete(client_id)
-    if not deleted_client:
+def delete_client(client_id: str):
+    collection = get_clients()
+    result = collection.delete_one({"_id": ObjectId(client_id)})
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return {"message": "Cliente eliminado exitosamente"}
 
 @app.get("/clients/", response_model=ClientList)
-async def list_clients(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
-    db: Session = Depends(get_db)
-):
-    repo = ClientRepository(db)
-    clients = repo.get_all(skip, limit)
-    total = db.query(Client).count()
+def list_clients(skip: int = 0, limit: int = 10):
+    collection = get_clients()
+    clients_cursor = collection.find().skip(skip).limit(limit)
+    clients = [ClientResponse(**doc, id=str(doc["_id"])) for doc in clients_cursor]
+    total = collection.count_documents({})
     return ClientList(
         clients=clients,
         total=total,
@@ -74,30 +75,41 @@ async def list_clients(
     )
 
 @app.post("/clients/search", response_model=List[ClientResponse])
-async def search_clients(
-    filters: ClientSearch,
-    db: Session = Depends(get_db)
-):
-    repo = ClientRepository(db)
-    return repo.search(filters)
+def search_clients(filters: ClientSearch):
+    collection = get_clients()
+    query = {}
+
+    if filters.name:
+        query["name"] = {"$regex": filters.name, "$options": "i"}
+    if filters.phone:
+        query["phone"] = filters.phone
+    if filters.mail:
+        query["mail"] = filters.mail
+    if filters.category:
+        query["category"] = {"$regex": filters.category, "$options": "i"}
+    if filters.state:
+        query["state"] = filters.state
+
+    clients_cursor = collection.find(query)
+    return [ClientResponse(**doc, id=str(doc["_id"])) for doc in clients_cursor]
 
 @app.post("/clients/upload-excel")
 async def upload_excel(
     file: UploadFile = File(...),
-    col_name: str = Query(..., description="Nombre de la columna para el nombre"),
-    col_number: str = Query(..., description="Nombre de la columna para el teléfono"),
-    col_review: str = Query(..., description="Nombre de la columna para la reseña"),
-    col_category: str = Query(..., description="Nombre de la columna para la categoría"),
-    col_adress: str = Query(..., description="Nombre de la columna para la dirección"),
-    col_web: str = Query(..., description="Nombre de la columna para la web"),
-    col_mail: str = Query(..., description="Nombre de la columna para el email"),
-    col_latitude: str = Query(..., description="Nombre de la columna para la latitud"),
-    col_length: str = Query(..., description="Nombre de la columna para la longitud"),
-    col_ubication: str = Query(..., description="Nombre de la columna para la ubicación")
+    col_name: str = Query(...),
+    col_number: str = Query(...),
+    col_review: str = Query(...),
+    col_category: str = Query(...),
+    col_adress: str = Query(...),
+    col_web: str = Query(...),
+    col_mail: str = Query(...),
+    col_latitude: str = Query(...),
+    col_length: str = Query(...),
+    col_ubication: str = Query(...)
 ):
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="El archivo debe ser un Excel (.xlsx o .xls)")
-    
+
     try:
         clients = process_excel(
             file,
@@ -112,7 +124,7 @@ async def upload_excel(
             col_length,
             col_ubication
         )
-        await save_clients(clients)
+        save_clients(clients)  # <- esto debe guardar directamente en MongoDB
         return {"message": f"Se procesaron {len(clients)} clientes exitosamente"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
