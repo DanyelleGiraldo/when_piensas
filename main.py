@@ -68,7 +68,7 @@ async def get_numero():
             current_index += 1
             estado_peticion = {"nombre": False, "numero": False}
 
-        return {"phone_number": numero}
+        return {"phone_number": f"{numero}"}
 
 
 @app.get("/")
