@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, EmailStr, validator
 from typing import Optional, List
-from base import ClientBase, ClientStatus
+from infrastructure.database.base_client import ClientBase, ClientStatus
 
 
 class ClientCreate(ClientBase):

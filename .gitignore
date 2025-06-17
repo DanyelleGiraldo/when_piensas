@@ -3,3 +3,7 @@ __pycache__/
 venv/
 .env
 .venv 
+whatsapp_service/.env
+excel_service/.env
+excel_service/venv
+whatsapp_service/venv
