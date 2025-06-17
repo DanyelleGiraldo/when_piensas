@@ -1,8 +1,8 @@
 fastapi
 uvicorn
 openpyxl
-psycopg2-binary
-sqlalchemy
 python-multipart
 python-dotenv
-sqlalchemy
+"pydantic<2"
+dnspython
+"pymongo[srv]"

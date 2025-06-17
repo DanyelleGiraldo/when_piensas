@@ -21,11 +21,9 @@ async def recive_whatsapp_message(request: Request):
     print("="*50)
 
     try:
-        # Si el data es una lista, accede al primer elemento
         if isinstance(data, list):
             data = data[0]
 
-        # Lógica para el formato estándar de la API de Meta
         if "entry" in data:
             messages = data["entry"][0]["changes"][0]["value"].get("messages", [])
         else:
