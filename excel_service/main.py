@@ -124,7 +124,7 @@ async def upload_excel(
             col_length,
             col_ubication
         )
-        save_clients(clients)  # <- esto debe guardar directamente en MongoDB
+        await save_clients(clients)
         return {"message": f"Se procesaron {len(clients)} clientes exitosamente"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

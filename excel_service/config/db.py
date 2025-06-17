@@ -3,13 +3,10 @@ import logging
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-# Cargar las variables de entorno
 load_dotenv()
 
-# Configurar logger
 logger = logging.getLogger(__name__)
 
-# Variables de entorno
 DB_CLUSTER = os.getenv("DB_CLUSTER")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
@@ -35,7 +32,6 @@ def init_database():
         return
 
     try:
-        collection.create_index("phone", unique=True)
         logger.info("Índices de MongoDB creados correctamente.")
     except Exception as e:
         logger.error(f"Error al crear índices en MongoDB: {e}")

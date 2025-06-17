@@ -1,6 +1,7 @@
 from openpyxl import load_workbook
 from fastapi import UploadFile
 from io import BytesIO
+from pymongo.errors import DuplicateKeyError
 from config.db import get_clients
 import logging
 
@@ -40,12 +41,63 @@ def process_excel(file: UploadFile, col_name, col_number, col_review, col_catego
     return clients
 
 
+def normalize(value):
+    return str(value).strip().lower() if value else ""
+
+def build_empty_key(client):
+    return f"{normalize(client.get('name'))}-{normalize(client.get('adress'))}-{normalize(client.get('ubication'))}"
+
 async def save_clients(client_list: list[dict]):
     try:
         clients_collection = get_clients()
-        if client_list:
-            result = clients_collection.insert_many(client_list)
+        if not client_list:
+            return
+
+        seen_phones = set()
+        seen_empty_keys = set()
+        filtered_clients = []
+
+        for c in client_list:
+            phone = normalize(c.get("phone"))
+
+            if phone == "":
+                key = build_empty_key(c)
+                if key not in seen_empty_keys:
+                    seen_empty_keys.add(key)
+                    filtered_clients.append(c)
+            elif phone not in seen_phones:
+                seen_phones.add(phone)
+                filtered_clients.append(c)
+            else:
+                # teléfono duplicado en el mismo archivo
+                logger.warning(f"Teléfono duplicado en Excel: {phone} - Cliente: {c.get('name')}")
+
+        # Verificar duplicados en la base de datos
+        phones_to_check = [normalize(c["phone"]) for c in filtered_clients if normalize(c.get("phone")) != ""]
+        existing_phones = {
+            client["phone"]
+            for client in clients_collection.find(
+                {"phone": {"$in": phones_to_check}},
+                {"phone": 1}
+            )
+        }
+
+        new_clients = []
+        for c in filtered_clients:
+            phone = normalize(c.get("phone"))
+            if phone == "":
+                new_clients.append(c)
+            elif phone not in existing_phones:
+                new_clients.append(c)
+            else:
+                logger.warning(f"Teléfono ya existe en base de datos: {phone} - Cliente: {c.get('name')}")
+
+        if new_clients:
+            result = clients_collection.insert_many(new_clients)
             logger.info(f"{len(result.inserted_ids)} clientes insertados correctamente.")
+        else:
+            logger.info("No hay clientes nuevos para insertar.")
+
     except Exception as e:
         logger.error(f'Error al guardar clientes: {e}')
         raise
