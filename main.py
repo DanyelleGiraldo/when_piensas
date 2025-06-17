@@ -38,7 +38,13 @@ async def get_nombre():
 
         if current_index >= len(nombres):
             reset_index()
-            return {"person_name": "no hay mas clientes"}
+            return {
+            "type": "conversation_initiation_client_data",
+            "dynamic_variables": {
+                "person_name": "no hay mas clientes"
+            },
+            "status": "success"
+        }
 
         nombre = nombres[current_index]
         estado_peticion["nombre"] = True
@@ -48,7 +54,13 @@ async def get_nombre():
             current_index += 1
             estado_peticion = {"nombre": False, "numero": False}
 
-        return {"person_name": nombre}
+        return {
+            "type": "conversation_initiation_client_data",
+            "dynamic_variables": {
+                "person_name": nombre
+            },
+            "status": "success"
+        }
 
 @app.get("/numero")
 async def get_numero():
