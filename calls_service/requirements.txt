@@ -3,3 +3,5 @@ uvicorn
 redis 
 pymongo 
 httpx
+pydantic[email]
+dotenv

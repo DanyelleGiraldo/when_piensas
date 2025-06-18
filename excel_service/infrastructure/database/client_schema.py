@@ -90,3 +90,4 @@ class ClientList(BaseModel):
     total: int
     page: int
     size: int
+
