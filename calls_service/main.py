@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from typing import List
 from infrasctructure.database.client_schema import ClientResponse, ClientList
 from config.db import get_clients, init_database
@@ -19,12 +19,11 @@ async def get_pending_clients(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/clients/{client_id}/mark-called", response_model=ClientResponse)
-async def mark_client_as_called(client_id: str):
-
+@app.put("/clients/mark-called-by-phone", response_model=ClientResponse)
+async def mark_client_as_called_by_phone(phone: str = Query(..., description="Número de teléfono del cliente")):
     try:
         service = ClientService()
-        updated_client = service.mark_as_called(client_id)
+        updated_client = service.mark_as_called_by_phone(phone)
         return updated_client
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

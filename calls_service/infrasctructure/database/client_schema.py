@@ -7,7 +7,7 @@ class ClientState(str, Enum):
     CALLED = "called"
 
 class ClientBase(BaseModel):
-    name: str = Field(..., min_length=2, max_length=100)
+    name: str = Field(..., min_length=2, max_length=300)
     phone: Optional[str] = Field(None, max_length=20)
     review: Optional[str] = Field(None, max_length=500)
     category: Optional[str] = Field(None, max_length=500)
@@ -33,6 +33,7 @@ class ClientList(BaseModel):
     total: int
     page: int
     size: int = 10
+    message: Optional[str] = None
     
     model_config = {
         "from_attributes": True

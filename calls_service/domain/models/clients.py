@@ -21,7 +21,7 @@ class ClientCreate(ClientBase):
 
 
 class ClientUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=100)
+    name: Optional[str] = Field(None, max_length=300)
     phone: Optional[str] = Field(None, max_length=20)
     review: Optional[str] = None
     category: Optional[str] = None
