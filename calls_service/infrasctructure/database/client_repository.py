@@ -11,11 +11,10 @@ class ClientRepository:
             {"state": "pending"}
         ).skip(skip).limit(limit))
 
-    def mark_as_called(self, client_id: str):
-        """Actualiza el estado del cliente a called"""
+    def mark_as_called_by_phone(self, phone_number: str):
         result = self.collection.update_one(
             {
-                "_id": ObjectId(client_id),
+                "phone": phone_number,
                 "state": "pending"
             },
             {
@@ -25,7 +24,8 @@ class ClientRepository:
         )
         if result.matched_count == 0:
             return None
-        return self.get_by_id(client_id)
+        return self.collection.find_one({"phone": phone_number})
+
 
     def get_by_id(self, client_id: str):
         return self.collection.find_one({"_id": ObjectId(client_id)})

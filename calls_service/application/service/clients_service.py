@@ -23,7 +23,6 @@ class ClientService:
         clients = self.repo.get_pending_clients(skip=skip, limit=limit)
         total = self.repo.count_pending()
         
-        # Convertir ObjectId a string para cada cliente
         prepared_clients = [self._prepare_client_data(client) for client in clients]
         
         return ClientList(
@@ -33,11 +32,11 @@ class ClientService:
             size=limit
         )
     
-    def mark_as_called(self, client_id: str) -> ClientResponse:
-        updated_client = self.repo.mark_as_called(client_id)
+    def mark_as_called_by_phone(self, phone_number: str) -> ClientResponse:
+        updated_client = self.repo.mark_as_called_by_phone(phone_number)
         if not updated_client:
             raise ValueError("Cliente no encontrado o no está en estado pendiente")
-        
+
         # Convertir ObjectId a string
         prepared_client = self._prepare_client_data(updated_client)
         return ClientResponse(**prepared_client)
