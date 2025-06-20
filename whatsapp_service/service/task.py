@@ -2,8 +2,14 @@ from celery import Celery, shared_task
 import asyncio
 from service.whatsapp_service import send_message_n8n
 from threading import Lock
+import os
+from dotenv import load_dotenv
 
-celery_app = Celery("whatsapp_tasks", broker="pyamqp://guest:guest@localhost:5672//")
+load_dotenv()
+
+celery_url= os.getenv("CELERY_BROKER_URL")
+
+celery_app = Celery("whatsapp_tasks", broker=celery_url)
 
 message_queue = []
 queue_lock = Lock()
