@@ -3,6 +3,7 @@ uvicorn
 openpyxl
 python-multipart
 python-dotenv
-"pydantic<2"
+pydantic<2
 dnspython
-"pymongo[srv]"
+pymongo[srv]
+pydantic[email]
